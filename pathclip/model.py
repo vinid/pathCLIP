@@ -80,7 +80,7 @@ class CLIPTuner:
 
                     total_loss = (self.loss_img(logits_per_image, ground_truth) + self.loss_txt(logits_per_text,
                                                                                                 ground_truth)) / 2
-                    self.experiment.log_metric("loss", total_loss.item(), step=step)
+                    #self.experiment.log_metric("loss", total_loss.item(), step=step)
 
                     step = step + 1
 
