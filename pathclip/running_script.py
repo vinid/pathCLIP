@@ -20,7 +20,7 @@ if __name__ == "__main__":
     args = load_args()
 
     train = pd.read_csv(args.training_dataset)
-    valid = pd.read_csv(args.valiation_dataset)
+    valid = pd.read_csv(args.validation_dataset)
 
     cpt = CLIPTuner(lr=args.learning_rate, weight_decay=args.weight_decay, comet_tracking=args.comet_tracking)
 
