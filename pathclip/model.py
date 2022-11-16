@@ -117,7 +117,7 @@ class CLIPTuner:
 
                         if total_loss < validation_loss:
                             validation_loss = total_loss
-                            torch.save(model.state_dict(), f"{save_directory}/trained_bs_{batch_size}_lr_{self.hyper_params['lr']}"
+                            torch.save(self.model.state_dict(), f"{save_directory}/trained_bs_{batch_size}_lr_{self.hyper_params['lr']}"
                                                            f"_wd_{self.hyper_params['weight_decay']}.pt")
 
                 pbar.close()
