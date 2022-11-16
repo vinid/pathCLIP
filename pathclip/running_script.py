@@ -4,16 +4,16 @@ import pandas as pd
 
 def load_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--training-dataset",  type=str)
-    parser.add_argument("--validation-dataset", type=str)
-    parser.add_argument("--batch-size", default=32, type=int)
-    parser.add_argument("--num_workers", default=4, type=int)
-    parser.add_argument("--learning-rate")
-    parser.add_argument("--epochs")
-    parser.add_argument("--save_directory")
-    parser.add_argument("--evaluation_steps")
-    parser.add_argument("--weight-decay")
-    parser.add_argument("--comet-tracking")
+    parser.add_argument("--training-dataset",  type=str, required=True)
+    parser.add_argument("--validation-dataset", type=str, required=True)
+    parser.add_argument("--batch-size", default=32, type=int, required=True)
+    parser.add_argument("--num_workers", default=4, type=int, required=True)
+    parser.add_argument("--learning-rate", required=True)
+    parser.add_argument("--epochs", required=True)
+    parser.add_argument("--save_directory", required=True)
+    parser.add_argument("--evaluation_steps", required=True)
+    parser.add_argument("--weight-decay", required=True)
+    parser.add_argument("--comet-tracking", required=True)
     return parser.parse_args()
 
 
