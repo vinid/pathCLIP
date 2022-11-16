@@ -46,8 +46,8 @@ class CLIPTuner:
         self.loss_img = nn.CrossEntropyLoss()
         self.loss_txt = nn.CrossEntropyLoss()
         self.optimizer = optim.AdamW(self.model.parameters(),
-                                    lr=hyper_params["lr"],
-                                    weight_decay=hyper_params["weight_decay"])
+                                    lr=self.hyper_params["lr"],
+                                    weight_decay=self.hyper_params["weight_decay"])
 
     def tuner(self, train_dataframe, validation_dataframe, save_directory, batch_size=4, epochs=5,
               evaluation_steps=500, num_workers=1):
