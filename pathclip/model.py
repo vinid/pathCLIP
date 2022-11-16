@@ -4,7 +4,7 @@ from torch import optim
 import clip
 import tqdm
 import torch
-from clip_tuner.dataset import ImageCaptioningDataset
+from pathclip.dataset import ImageCaptioningDataset
 from torch.utils.data import DataLoader
 
 
