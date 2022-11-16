@@ -72,7 +72,7 @@ class CLIPTuner:
 
                     images = list_image
                     images = images.to(self.device)
-                    texts = clip.tokenize(list_txt).to(self.device)
+                    texts = clip.tokenize(list_txt, truncate=True).to(self.device)
 
                     logits_per_image, logits_per_text = self.model(images, texts)
 
@@ -104,7 +104,7 @@ class CLIPTuner:
 
                             images = list_image
                             images = images.to(self.device)
-                            texts = clip.tokenize(list_txt).to(self.device)
+                            texts = clip.tokenize(list_txt, truncate=True).to(self.device)
 
                             logits_per_image, logits_per_text = self.model(images, texts)
 
