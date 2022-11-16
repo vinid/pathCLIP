@@ -10,6 +10,7 @@ def load_args():
     parser.add_argument("--num_workers", default=4, type=int, required=True)
     parser.add_argument("--learning-rate", required=True, type=float)
     parser.add_argument("--epochs", required=True)
+    parser.add_argument("--evaluation-steps", type=int, required=True)
     parser.add_argument("--save_directory", required=True)
     parser.add_argument("--weight-decay", required=True, type=float)
     parser.add_argument("--comet-tracking", required=True)
