@@ -26,4 +26,4 @@ if __name__ == "__main__":
     cpt = CLIPTuner(lr=args.learning_rate, weight_decay=args.weight_decay, comet_tracking=args.comet_tracking)
 
     cpt.tuner(train, valid, save_directory=args.save_directory, batch_size=args.batch_size,
-              epochs=5, evaluation_steps=args.evaluation_steps, num_workers=args.num_workers)
+              epochs=args.epochs, evaluation_steps=args.evaluation_steps, num_workers=args.num_workers)

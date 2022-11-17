@@ -3,16 +3,64 @@ from torch import nn
 from torch import optim
 import clip
 import tqdm
+import numpy as np
 import torch
-from pathclip.dataset import ImageCaptioningDataset
+from pathclip.dataset import *
 from torch.utils.data import DataLoader
 
+def zero_shot_classification(model, preprocess, images, labels):
+    image_embeddings = image_embedder(model, preprocess,images)
+    text_embeddings = text_embedder(model, labels)
 
-def image_embedder():
-    pass
+    score = image_embeddings.dot(text_embeddings.T)
+    predictions = [labels[np.argmax(i)] for i in score]
 
-def text_embedder():
-    pass
+    return predictions
+
+
+def image_embedder(model, preprocess, list_of_images, device="cuda"):
+    batch_size = 64
+    train_dataset = ImageDataset(list_of_images, preprocess)
+    dataloader = DataLoader(train_dataset, batch_size=batch_size)
+
+    image_embeddings = []
+
+    total = len(list_of_images) // batch_size
+    pbar = tqdm.tqdm(total=total, position=0)
+
+    for images in dataloader:
+        images = images.to(device)
+
+        image_embeddings.extend(model.encode_image(images).detach().cpu().numpy())
+
+        pbar.update(1)
+    pbar.close()
+
+    image_embeddings = np.array(image_embeddings)
+    image_embeddings = image_embeddings / np.linalg.norm(image_embeddings, axis=1, keepdims=True)
+    return image_embeddings
+
+def text_embedder(model, list_of_labels, device="cuda"):
+    batch_size = 64
+    train_dataset = CaptioningDataset(list_of_labels)
+    dataloader = DataLoader(train_dataset, batch_size=batch_size)
+    text_embeddings = []
+    total = len(list_of_labels) // batch_size
+
+    pbar = tqdm.tqdm(total=total, position=0)
+
+    for captions in dataloader:
+        idx = clip.tokenize(captions, truncate=True).to(device)
+        text_embeddings.extend(model.encode_text(idx).detach().cpu().numpy())
+
+        pbar.update(1)
+
+    pbar.close()
+
+    text_embeddings = np.array(text_embeddings)
+    text_embeddings = text_embeddings / np.linalg.norm(text_embeddings, axis=1, keepdims=True)
+
+    return text_embeddings
 
 def convert_models_to_fp32(model):
     for p in model.parameters():
@@ -76,12 +124,13 @@ class CLIPTuner:
 
                     logits_per_image, logits_per_text = self.model(images, texts)
 
+                    logits_per_image = 20*logits_per_image
+                    logits_per_text = 20*logits_per_text
+
                     ground_truth = torch.arange(len(images), dtype=torch.long, device=self.device)
 
                     total_loss = (self.loss_img(logits_per_image, ground_truth) + self.loss_txt(logits_per_text,
                                                                                                 ground_truth)) / 2
-                    #self.experiment.log_metric("loss", total_loss.item(), step=step)
-
                     step = step + 1
 
                     total_loss.backward()

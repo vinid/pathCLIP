@@ -30,8 +30,8 @@ class CaptioningDataset(Dataset):
 
 
 class ImageDataset(Dataset):
-    def __init__(self, df, preprocessing):
-        self.images = df["image"].tolist()
+    def __init__(self, list_of_images, preprocessing):
+        self.images = list_of_images
         self.preprocessing = preprocessing
 
     def __len__(self):
