@@ -8,9 +8,9 @@ import torch
 from pathclip.dataset import *
 from torch.utils.data import DataLoader
 
-def zero_shot_classification(model, preprocess, images, labels):
-    image_embeddings = image_embedder(model, preprocess,images)
-    text_embeddings = text_embedder(model, labels)
+def zero_shot_classification(model, preprocess, images, labels, num_workers=1):
+    image_embeddings = image_embedder(model, preprocess,images, num_workers)
+    text_embeddings = text_embedder(model, labels, num_workers)
 
     score = image_embeddings.dot(text_embeddings.T)
     predictions = [labels[np.argmax(i)] for i in score]
@@ -18,10 +18,10 @@ def zero_shot_classification(model, preprocess, images, labels):
     return predictions
 
 
-def image_embedder(model, preprocess, list_of_images, device="cuda"):
+def image_embedder(model, preprocess, list_of_images, device="cuda", num_workers=1):
     batch_size = 64
     train_dataset = ImageDataset(list_of_images, preprocess)
-    dataloader = DataLoader(train_dataset, batch_size=batch_size)
+    dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers)
 
     image_embeddings = []
 
@@ -40,10 +40,10 @@ def image_embedder(model, preprocess, list_of_images, device="cuda"):
     image_embeddings = image_embeddings / np.linalg.norm(image_embeddings, axis=1, keepdims=True)
     return image_embeddings
 
-def text_embedder(model, list_of_labels, device="cuda"):
+def text_embedder(model, list_of_labels, device="cuda", num_workers=1):
     batch_size = 64
     train_dataset = CaptioningDataset(list_of_labels)
-    dataloader = DataLoader(train_dataset, batch_size=batch_size)
+    dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers)
     text_embeddings = []
     total = len(list_of_labels) // batch_size
 
