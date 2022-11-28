@@ -6,58 +6,17 @@ import tqdm
 import numpy as np
 from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
 import torch
-from torchvision.transforms import (
-    RandomAffine,
-    RandomPerspective,
-    RandomAutocontrast,
-    RandomEqualize,
-    RandomRotation
-)
+
 from pathclip.dataset import *
+from pathclip.transform import _train_transform
 from torch.utils.data import DataLoader
 from PIL import Image
 from datetime import datetime
 
-from torchvision.transforms import InterpolationMode
-BICUBIC = InterpolationMode.BICUBIC
 
-
-def _convert_image_to_rgb(image):
-    return image.convert("RGB")
-
-def _train_transform(n_px):
-    return Compose([
-
-        RandomPerspective(
-            distortion_scale=0.3,
-            p=0.3,
-            interpolation=InterpolationMode.BILINEAR,
-            fill=127,
-        ),
-        RandomRotation(degrees=(0, 180)),
-        Resize(n_px, interpolation=BICUBIC),
-        CenterCrop(n_px),
-        _convert_image_to_rgb,
-        ToTensor(),
-        Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
-    ])
-
-
-
-
-def _transform(n_px):
-    return Compose([
-        Resize(n_px, interpolation=BICUBIC),
-        CenterCrop(n_px),
-        _convert_image_to_rgb,
-        ToTensor(),
-        Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
-    ])
-
-
-def zero_shot_classification(model, preprocess, images, labels, device, num_workers=1):
-    image_embeddings = image_embedder(model, preprocess, images, device, num_workers)
-    text_embeddings = text_embedder(model, labels, device, num_workers)
+def zero_shot_classification(model, preprocess, images, labels, device, num_workers=1, batch_size=32):
+    image_embeddings = image_embedder(model, preprocess, images, device, num_workers, batch_size)
+    text_embeddings = text_embedder(model, labels, device, num_workers, batch_size)
 
     score = image_embeddings.dot(text_embeddings.T)
     predictions = [labels[np.argmax(i)] for i in score]
@@ -65,8 +24,7 @@ def zero_shot_classification(model, preprocess, images, labels, device, num_work
     return predictions
 
 
-def image_embedder(model, preprocess, list_of_images, device="cuda", num_workers=1):
-    batch_size = 64
+def image_embedder(model, preprocess, list_of_images, device="cuda", num_workers=1, batch_size=32):
     train_dataset = ImageDataset(list_of_images, preprocess)
     dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers)
 
@@ -87,8 +45,7 @@ def image_embedder(model, preprocess, list_of_images, device="cuda", num_workers
     image_embeddings = image_embeddings / np.linalg.norm(image_embeddings, axis=1, keepdims=True)
     return image_embeddings
 
-def text_embedder(model, list_of_labels, device="cuda", num_workers=1):
-    batch_size = 64
+def text_embedder(model, list_of_labels, device="cuda", num_workers=1, batch_size=32):
     train_dataset = CaptioningDataset(list_of_labels)
     dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers)
     text_embeddings = []
@@ -116,11 +73,12 @@ def convert_models_to_fp32(model):
 
 class CLIPTuner:
 
-    def __init__(self, lr=5e-5, weight_decay=0.2, comet_tracking=None, px_size=224):
+    def __init__(self, model_type="ViT-B/32", lr=5e-5, weight_decay=0.2, comet_tracking=None, px_size=224):
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
-        self.model, self.preprocess = clip.load("ViT-B/32", device=self.device,
+        self.model, self.preprocess = clip.load(model_type, device=self.device,
                                                 jit=False)  # Must set jit=False for training
+
         self.train_preprocess = _train_transform(px_size)
         if comet_tracking:
             self.experiment = Experiment(comet_tracking, project_name="pathclip")
@@ -214,10 +172,8 @@ class CLIPTuner:
 
                                 self.experiment.log_metric("validation_loss", total_loss.item(), step=step)
 
-                            if total_loss < validation_loss:
-                                validation_loss = total_loss
-                                torch.save(self.model.state_dict(), f"{save_directory}/trained_bs_{batch_size}_lr_{self.hyper_params['lr']}"
-                                                               f"_wd_{self.hyper_params['weight_decay']}"
-                                                                    f"_{start_time}_{self.experiment.get_name()}.pt")
+                torch.save(self.model.state_dict(), f"{save_directory}/trained_bs_{batch_size}_lr_{self.hyper_params['lr']}"
+                                               f"_wd_{self.hyper_params['weight_decay']}_epoch_{epoch}"
+                                                    f"_{start_time}_{self.experiment.get_name()}.pt")
 
                 pbar.close()
