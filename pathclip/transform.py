@@ -15,14 +15,6 @@ def _convert_image_to_rgb(image):
 
 def _train_transform(n_px):
     return Compose([
-
-        RandomPerspective(
-            distortion_scale=0.3,
-            p=0.3,
-            interpolation=InterpolationMode.BILINEAR,
-            fill=127,
-        ),
-        RandomRotation(degrees=(0, 180)),
         Resize(n_px, interpolation=BICUBIC),
         CenterCrop(n_px),
         _convert_image_to_rgb,
