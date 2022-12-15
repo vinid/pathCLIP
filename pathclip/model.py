@@ -165,12 +165,16 @@ class CLIPTuner:
 
                                 logits_per_image, logits_per_text = self.model(images, texts)
 
+                                logits_per_image = 20 * logits_per_image
+                                logits_per_text = 20 * logits_per_text
+
                                 ground_truth = torch.arange(len(images), dtype=torch.long, device=self.device)
 
                                 total_loss = (self.loss_img(logits_per_image, ground_truth) +
                                               self.loss_txt(logits_per_text, ground_truth)) / 2
 
                                 self.experiment.log_metric("validation_loss", total_loss.item(), step=step)
+                        pbar.set_description(f"{epoch}/{epochs}")
 
                 torch.save(self.model.state_dict(), f"{save_directory}/trained_bs_{batch_size}_lr_{self.hyper_params['lr']}"
                                                f"_wd_{self.hyper_params['weight_decay']}_epoch_{epoch}"
