@@ -107,7 +107,7 @@ class CLIPTuner:
               evaluation_steps=500, num_workers=1):
 
         start_time = str(datetime.now())
-        train_dataset = ImageCaptioningDataset(train_dataframe, self.preprocess)
+        train_dataset = ImageCaptioningDataset(train_dataframe, self.train_preprocess)
         validation_dataset = ImageCaptioningDataset(validation_dataframe, self.preprocess)
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers)
         validation_dataloader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_workers)
