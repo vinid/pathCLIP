@@ -6,13 +6,22 @@ import tqdm
 import numpy as np
 from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
 import torch
+import math
+from torch.optim.lr_scheduler import LinearLR
 
 from pathclip.dataset import *
 from pathclip.transform import _train_transform
+from pathclip.scheduler import cosine_lr
 from torch.utils.data import DataLoader
 from PIL import Image
 from datetime import datetime
 
+
+def unwrap_model(model):
+    if hasattr(model, 'module'):
+        return model.module
+    else:
+        return model
 
 def zero_shot_classification(model, preprocess, images, labels, device, num_workers=1, batch_size=32):
     image_embeddings = image_embedder(model, preprocess, images, device, num_workers, batch_size)
@@ -73,12 +82,12 @@ def convert_models_to_fp32(model):
 
 class CLIPTuner:
 
-    def __init__(self, model_type="ViT-B/32", lr=5e-5, weight_decay=0.2, comet_tracking=None, px_size=224):
+    def __init__(self, model_type="ViT-B/32", lr=5e-5, weight_decay=0.2, warmup=50, comet_tracking=None, px_size=224):
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
         self.model, self.preprocess = clip.load(model_type, device=self.device,
                                                 jit=False)  # Must set jit=False for training
-
+        self.warmup = warmup
         self.train_preprocess = _train_transform(px_size)
         if comet_tracking:
             self.experiment = Experiment(comet_tracking, project_name="pathclip")
@@ -111,18 +120,20 @@ class CLIPTuner:
         validation_dataset = ImageCaptioningDataset(validation_dataframe, self.preprocess)
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers)
         validation_dataloader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_workers)
+        num_batches_per_epoch = len(train_dataloader)
+        total_steps = len(train_dataloader) * epochs
+        scheduler = cosine_lr(self.optimizer, self.hyper_params["lr"], self.warmup, total_steps)
 
-        validation_loss = 10000
-        step = 0
         with self.experiment.train():
 
             for epoch in range(epochs):
                 pbar = tqdm.tqdm(position=0, total=len(train_dataloader))
                 pbar.set_description(f"{epoch}/{epochs}")
 
-                for batch in train_dataloader:
-
+                for i, batch in enumerate(train_dataloader):
                     self.optimizer.zero_grad()
+                    step = num_batches_per_epoch * epoch + i
+                    scheduler(step)
 
                     list_image, list_txt = batch
 
@@ -132,16 +143,18 @@ class CLIPTuner:
 
                     logits_per_image, logits_per_text = self.model(images, texts)
 
-                    logits_per_image = 20*logits_per_image
-                    logits_per_text = 20*logits_per_text
+                    logit_scale = self.model.logit_scale.exp()
+                    self.experiment.log_metric("logit_scale", logit_scale.item(), step=step)
+
+                    logits_per_image = logit_scale*logits_per_image
+                    logits_per_text = logit_scale*logits_per_text
 
                     ground_truth = torch.arange(len(images), dtype=torch.long, device=self.device)
 
                     total_loss = (self.loss_img(logits_per_image, ground_truth) + self.loss_txt(logits_per_text,
                                                                                                 ground_truth)) / 2
-                    step = step + 1
-
                     total_loss.backward()
+                    scheduler(step)
                     if self.device == "cpu":
                         self.optimizer.step()
                     else:
@@ -149,6 +162,9 @@ class CLIPTuner:
                         self.optimizer.step()
                         clip.model.convert_weights(self.model)
                     pbar.update(1)
+
+                    with torch.no_grad():
+                        unwrap_model(self.model).logit_scale.clamp_(0, math.log(100))
 
                     if step % evaluation_steps == 0:
 
@@ -164,9 +180,10 @@ class CLIPTuner:
                                 texts = clip.tokenize(list_txt, truncate=True).to(self.device)
 
                                 logits_per_image, logits_per_text = self.model(images, texts)
+                                logit_scale = self.model.logit_scale.exp()
 
-                                logits_per_image = 20 * logits_per_image
-                                logits_per_text = 20 * logits_per_text
+                                logits_per_image = logit_scale * logits_per_image
+                                logits_per_text = logit_scale * logits_per_text
 
                                 ground_truth = torch.arange(len(images), dtype=torch.long, device=self.device)
 
