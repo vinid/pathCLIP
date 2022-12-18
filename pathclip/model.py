@@ -154,7 +154,8 @@ class CLIPTuner:
                     total_loss = (self.loss_img(logits_per_image, ground_truth) + self.loss_txt(logits_per_text,
                                                                                                 ground_truth)) / 2
                     total_loss.backward()
-                    scheduler(step)
+                    new_lr = scheduler(step)
+                    self.experiment.log_metric("learning_rate", new_lr, step=step)
                     if self.device == "cpu":
                         self.optimizer.step()
                     else:
