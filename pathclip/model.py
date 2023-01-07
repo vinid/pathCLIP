@@ -82,7 +82,7 @@ def convert_models_to_fp32(model):
 
 class CLIPTuner:
 
-    def __init__(self, model_type="ViT-B/32", lr=5e-5, weight_decay=0.2, warmup=50, comet_tracking=None, px_size=224):
+    def __init__(self, model_type="ViT-B/32", lr=5e-5, weight_decay=0.2, warmup=50, comet_tracking=None, px_size=224, comet_tags=None):
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
         self.model, self.preprocess = clip.load(model_type, device=self.device,
@@ -93,6 +93,9 @@ class CLIPTuner:
             self.experiment = Experiment(comet_tracking, project_name="pathclip")
         else:
             self.experiment = Experiment()
+
+        if comet_tags:
+            self.experiment.add_tags(comet_tags)
 
         if self.device == "cpu":
             self.model.float()
@@ -146,8 +149,8 @@ class CLIPTuner:
                     logit_scale = self.model.logit_scale.exp()
                     self.experiment.log_metric("logit_scale", logit_scale.item(), step=step)
 
-                    logits_per_image = logit_scale*logits_per_image
-                    logits_per_text = logit_scale*logits_per_text
+                    logits_per_image = logits_per_image
+                    logits_per_text = logits_per_text
 
                     ground_truth = torch.arange(len(images), dtype=torch.long, device=self.device)
 
@@ -181,10 +184,9 @@ class CLIPTuner:
                                 texts = clip.tokenize(list_txt, truncate=True).to(self.device)
 
                                 logits_per_image, logits_per_text = self.model(images, texts)
-                                logit_scale = self.model.logit_scale.exp()
 
-                                logits_per_image = logit_scale * logits_per_image
-                                logits_per_text = logit_scale * logits_per_text
+                                logits_per_image = logits_per_image
+                                logits_per_text = logits_per_text
 
                                 ground_truth = torch.arange(len(images), dtype=torch.long, device=self.device)
 

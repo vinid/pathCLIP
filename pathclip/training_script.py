@@ -14,6 +14,7 @@ def load_args():
     parser.add_argument("--save_directory", required=True)
     parser.add_argument("--weight-decay", required=True, type=float)
     parser.add_argument("--comet-tracking", required=True)
+    parser.add_argument("--comet_tags", nargs="*")
     return parser.parse_args()
 
 
@@ -23,7 +24,8 @@ if __name__ == "__main__":
     train = pd.read_csv(args.training_dataset)
     valid = pd.read_csv(args.validation_dataset)
 
-    cpt = CLIPTuner(lr=args.learning_rate, weight_decay=args.weight_decay, comet_tracking=args.comet_tracking)
+    cpt = CLIPTuner(lr=args.learning_rate, weight_decay=args.weight_decay, comet_tracking=args.comet_tracking,
+                    comet_tags=args.comet_tags)
 
     cpt.tuner(train, valid, save_directory=args.save_directory, batch_size=args.batch_size,
               epochs=args.epochs, evaluation_steps=args.evaluation_steps, num_workers=args.num_workers)
