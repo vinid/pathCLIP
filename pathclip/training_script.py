@@ -1,6 +1,7 @@
 import argparse
 from pathclip.model import CLIPTuner
 import pandas as pd
+import json
 
 def load_args():
     parser = argparse.ArgumentParser()
@@ -27,5 +28,18 @@ if __name__ == "__main__":
     cpt = CLIPTuner(lr=args.learning_rate, weight_decay=args.weight_decay, comet_tracking=args.comet_tracking,
                     comet_tags=args.comet_tags)
 
-    cpt.tuner(train, valid, save_directory=args.save_directory, batch_size=args.batch_size,
+    model_name = cpt.tuner(train, valid, save_directory=args.save_directory, batch_size=args.batch_size,
               epochs=args.epochs, evaluation_steps=args.evaluation_steps, num_workers=args.num_workers)
+
+    saving_args = {
+        "bs": args.batch_size,
+        "comet_tags": args.comet_tags,
+        "weight_decay": args.decay,
+        "learning_rate": args.learning_rage,
+        "total_epochs": args.epochs,
+        "evaluation_steps": args.evaluation_steps
+    }
+
+    with open(f"{args.save_directory}/{model_name}_config.json", "w") as filino:
+        filino.write(json.dumps(saving_args))
+

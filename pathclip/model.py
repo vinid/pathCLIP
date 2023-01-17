@@ -196,8 +196,9 @@ class CLIPTuner:
                                 self.experiment.log_metric("validation_loss", total_loss.item(), step=step)
                         pbar.set_description(f"{epoch}/{epochs}")
 
-                torch.save(self.model.state_dict(), f"{save_directory}/trained_bs_{batch_size}_lr_{self.hyper_params['lr']}"
-                                               f"_wd_{self.hyper_params['weight_decay']}_epoch_{epoch}"
+                torch.save(self.model.state_dict(), f"{save_directory}/epoch_{epoch}"
                                                     f"_{start_time}_{self.experiment.get_name()}.pt")
 
                 pbar.close()
+
+                return f"_{start_time}_{self.experiment.get_name()}.pt"
