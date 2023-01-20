@@ -34,7 +34,7 @@ if __name__ == "__main__":
     saving_args = {
         "bs": args.batch_size,
         "comet_tags": args.comet_tags,
-        "weight_decay": args.decay,
+        "weight_decay": args.weight_decay,
         "learning_rate": args.learning_rage,
         "total_epochs": args.epochs,
         "evaluation_steps": args.evaluation_steps
