@@ -201,4 +201,4 @@ class CLIPTuner:
 
                 pbar.close()
 
-                return f"_{start_time}_{self.experiment.get_name()}.pt"
+        return f"_{start_time}_{self.experiment.get_name()}.pt"
