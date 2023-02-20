@@ -7,6 +7,7 @@ def load_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--training-dataset",  type=str, required=True)
     parser.add_argument("--validation-dataset", type=str, required=True)
+    parser.add_argument("--clip-version", type=str, default="ViT-B/32")
     parser.add_argument("--batch-size", default=32, type=int, required=True)
     parser.add_argument("--num_workers", default=4, type=int, required=True)
     parser.add_argument("--learning-rate", required=True, type=float)
@@ -26,7 +27,7 @@ if __name__ == "__main__":
     valid = pd.read_csv(args.validation_dataset)
 
     cpt = CLIPTuner(lr=args.learning_rate, weight_decay=args.weight_decay, comet_tracking=args.comet_tracking,
-                    comet_tags=args.comet_tags)
+                    comet_tags=args.comet_tags, model_type=args.clip_version)
 
     model_name = cpt.tuner(train, valid, save_directory=args.save_directory, batch_size=args.batch_size,
               epochs=args.epochs, evaluation_steps=args.evaluation_steps, num_workers=args.num_workers)

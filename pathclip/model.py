@@ -159,6 +159,7 @@ class CLIPTuner:
                     total_loss.backward()
                     new_lr = scheduler(step)
                     self.experiment.log_metric("learning_rate", new_lr, step=step)
+
                     if self.device == "cpu":
                         self.optimizer.step()
                     else:
@@ -194,10 +195,12 @@ class CLIPTuner:
                                               self.loss_txt(logits_per_text, ground_truth)) / 2
 
                                 self.experiment.log_metric("validation_loss", total_loss.item(), step=step)
+                                torch.save(self.model.state_dict(), f"{save_directory}/epoch_{epoch}"
+                                                                    f"_{start_time}_{self.experiment.get_name()}"
+                                                                    f"_steps_{steps}.pt")
                         pbar.set_description(f"{epoch}/{epochs}")
 
-                torch.save(self.model.state_dict(), f"{save_directory}/epoch_{epoch}"
-                                                    f"_{start_time}_{self.experiment.get_name()}.pt")
+
 
                 pbar.close()
 
