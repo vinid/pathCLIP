@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     dataset_name = args.training_dataset.split("/")[-1].split(".")
 
-    evaluation_steps = int(len(train)/4)
+    evaluation_steps = int((len(train)/args.batch_size)/4)
 
     cpt = CLIPTuner(lr=args.learning_rate, weight_decay=args.weight_decay, comet_tracking=args.comet_tracking,
                     comet_tags=args.comet_tags, model_type=args.clip_version,

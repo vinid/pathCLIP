@@ -121,9 +121,9 @@ class CLIPTuner:
         for key, value in saving_args.items():
             additional_name += f"{key}_{value}_"
 
-        model_name = f"{additional_name}_{start_time}_{self.experiment.get_name()}.pt"
+        self.model_name = f"{additional_name}_{start_time}_{self.experiment.get_name()}.pt"
 
-        with open(f"{saving_directory}/{model_name}_config.json", "w") as filino:
+        with open(f"{saving_directory}/{self.model_name}_config.json", "w") as filino:
             filino.write(json.dumps(saving_args))
 
         if comet_tags:
@@ -229,12 +229,10 @@ class CLIPTuner:
                                               self.loss_txt(logits_per_text, ground_truth)) / 2
 
                                 self.experiment.log_metric("validation_loss", total_loss.item(), step=step)
-                                torch.save(self.model.state_dict(), f"{self.save_directory}/epoch_{epoch}"
-                                                                    f"_{start_time}_{self.experiment.get_name()}"
+                                torch.save(self.model.state_dict(), f"{self.save_directory}/"
+                                                                    f"_{self.model_name}"
                                                                     f"_steps_{step}.pt")
                         pbar.set_description(f"{epoch}/{self.epochs}")
-
-
 
                 pbar.close()
 
