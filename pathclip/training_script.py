@@ -14,6 +14,7 @@ def load_args():
     parser.add_argument("--clip-version", type=str, default="ViT-B/32")
     parser.add_argument("--batch-size", default=32, type=int, required=True)
     parser.add_argument("--num_workers", default=4, type=int, required=True)
+    parser.add_argument("--seed", default=0, type=int, required=True)
     parser.add_argument("--learning-rate", required=True, type=float)
     parser.add_argument("--epochs", required=True, type=int)
     parser.add_argument("--save_directory", required=True)
@@ -23,15 +24,17 @@ def load_args():
     return parser.parse_args()
 
 
-
 if __name__ == "__main__":
 
 
     args = load_args()
 
-    torch.manual_seed(0)
-    np.random.seed(0)
-    random.seed(0)
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
+    random.seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
+    torch.backends.cudnn.deterministic = True
 
 
     train = pd.read_csv(args.training_dataset)
