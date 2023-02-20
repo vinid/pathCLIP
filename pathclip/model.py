@@ -15,7 +15,7 @@ from pathclip.scheduler import cosine_lr
 from torch.utils.data import DataLoader
 from PIL import Image
 from datetime import datetime
-
+import json
 
 def unwrap_model(model):
     if hasattr(model, 'module'):
@@ -82,7 +82,19 @@ def convert_models_to_fp32(model):
 
 class CLIPTuner:
 
-    def __init__(self, model_type="ViT-B/32", lr=5e-5, weight_decay=0.2, warmup=50, comet_tracking=None, px_size=224, comet_tags=None):
+    def __init__(self, model_type="ViT-B/32", lr=5e-5, weight_decay=0.1, warmup=50,
+                 comet_tracking=None, px_size=224, comet_tags=None, batch_size=128,
+                 saving_directory="", evaluation_steps= 100, epochs=10):
+
+        self.save_directory = saving_directory
+        self.epochs = epochs
+        self.lr = lr
+        self.batch_size = batch_size
+        self.weight_decay = weight_decay
+        self.evaluation_steps = evaluation_steps
+
+        start_time = str(datetime.now())
+
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
         self.model, self.preprocess = clip.load(model_type, device=self.device,
@@ -93,6 +105,20 @@ class CLIPTuner:
             self.experiment = Experiment(comet_tracking, project_name="pathclip")
         else:
             self.experiment = Experiment()
+
+        model_name = f"_{start_time}_{self.experiment.get_name()}.pt"
+
+        saving_args = {
+            "bs": batch_size,
+            "comet_tags": comet_tags,
+            "weight_decay": weight_decay,
+            "learning_rate": lr,
+            "total_epochs": epochs,
+            "evaluation_steps": evaluation_steps
+        }
+
+        with open(f"{saving_directory}/{model_name}_config.json", "w") as filino:
+            filino.write(json.dumps(saving_args))
 
         if comet_tags:
             self.experiment.add_tags(comet_tags)
@@ -111,27 +137,28 @@ class CLIPTuner:
 
         self.loss_img = nn.CrossEntropyLoss()
         self.loss_txt = nn.CrossEntropyLoss()
+
         self.optimizer = optim.AdamW(self.model.parameters(),
                                     lr=self.hyper_params["lr"],
                                     weight_decay=self.hyper_params["weight_decay"])
 
-    def tuner(self, train_dataframe, validation_dataframe, save_directory, batch_size=4, epochs=5,
-              evaluation_steps=500, num_workers=1):
+    def tuner(self, train_dataframe, validation_dataframe, num_workers=1):
 
         start_time = str(datetime.now())
         train_dataset = ImageCaptioningDataset(train_dataframe, self.train_preprocess)
         validation_dataset = ImageCaptioningDataset(validation_dataframe, self.preprocess)
-        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers)
-        validation_dataloader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_workers)
+        train_dataloader = DataLoader(train_dataset, batch_size=self.batch_size, num_workers=num_workers)
+        validation_dataloader = DataLoader(validation_dataset, batch_size=self.batch_size, num_workers=num_workers)
         num_batches_per_epoch = len(train_dataloader)
-        total_steps = len(train_dataloader) * epochs
+        total_steps = len(train_dataloader) * self.epochs
+
         scheduler = cosine_lr(self.optimizer, self.hyper_params["lr"], self.warmup, total_steps)
 
         with self.experiment.train():
 
-            for epoch in range(epochs):
+            for epoch in range(self.epochs):
                 pbar = tqdm.tqdm(position=0, total=len(train_dataloader))
-                pbar.set_description(f"{epoch}/{epochs}")
+                pbar.set_description(f"{epoch}/{self.epochs}")
 
                 for i, batch in enumerate(train_dataloader):
                     self.optimizer.zero_grad()
@@ -166,12 +193,13 @@ class CLIPTuner:
                         convert_models_to_fp32(self.model)
                         self.optimizer.step()
                         clip.model.convert_weights(self.model)
+
                     pbar.update(1)
 
                     with torch.no_grad():
                         unwrap_model(self.model).logit_scale.clamp_(0, math.log(100))
 
-                    if step % evaluation_steps == 0:
+                    if step % self.evaluation_steps == 0:
 
                         for batch in validation_dataloader:
                             pbar.set_description("Currently Validating")
@@ -195,13 +223,12 @@ class CLIPTuner:
                                               self.loss_txt(logits_per_text, ground_truth)) / 2
 
                                 self.experiment.log_metric("validation_loss", total_loss.item(), step=step)
-                                torch.save(self.model.state_dict(), f"{save_directory}/epoch_{epoch}"
+                                torch.save(self.model.state_dict(), f"{self.save_directory}/epoch_{epoch}"
                                                                     f"_{start_time}_{self.experiment.get_name()}"
-                                                                    f"_steps_{steps}.pt")
-                        pbar.set_description(f"{epoch}/{epochs}")
+                                                                    f"_steps_{step}.pt")
+                        pbar.set_description(f"{epoch}/{self.epochs}")
 
 
 
                 pbar.close()
 
-        return f"_{start_time}_{self.experiment.get_name()}.pt"
