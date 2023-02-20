@@ -208,7 +208,7 @@ class CLIPTuner:
                     if step % self.evaluation_steps == 0:
                         torch.save(self.model.state_dict(), f"{self.save_directory}/"
                                                             f"_{self.model_name}"
-                                                            f"_steps_{step}.pt")
+                                                            "_steps_%04d.pt" % step)
 
                         for batch in validation_dataloader:
                             pbar.set_description("Currently Validating")
