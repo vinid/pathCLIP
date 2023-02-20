@@ -2,6 +2,8 @@ import argparse
 from pathclip.model import CLIPTuner
 import pandas as pd
 import json
+import torch
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 def load_args():
     parser = argparse.ArgumentParser()
