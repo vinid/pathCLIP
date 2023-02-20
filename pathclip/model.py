@@ -206,6 +206,9 @@ class CLIPTuner:
                         unwrap_model(self.model).logit_scale.clamp_(0, math.log(100))
 
                     if step % self.evaluation_steps == 0:
+                        torch.save(self.model.state_dict(), f"{self.save_directory}/"
+                                                            f"_{self.model_name}"
+                                                            f"_steps_{step}.pt")
 
                         for batch in validation_dataloader:
                             pbar.set_description("Currently Validating")
@@ -229,9 +232,7 @@ class CLIPTuner:
                                               self.loss_txt(logits_per_text, ground_truth)) / 2
 
                                 self.experiment.log_metric("validation_loss", total_loss.item(), step=step)
-                                torch.save(self.model.state_dict(), f"{self.save_directory}/"
-                                                                    f"_{self.model_name}"
-                                                                    f"_steps_{step}.pt")
+
                         pbar.set_description(f"{epoch}/{self.epochs}")
 
                 pbar.close()
