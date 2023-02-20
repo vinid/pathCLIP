@@ -84,7 +84,7 @@ class CLIPTuner:
 
     def __init__(self, model_type="ViT-B/32", lr=5e-5, weight_decay=0.1, warmup=50,
                  comet_tracking=None, px_size=224, comet_tags=None, batch_size=128,
-                 saving_directory="", evaluation_steps= 100, epochs=10):
+                 saving_directory="", evaluation_steps= 100, epochs=10, dataset_name=""):
 
         self.save_directory = saving_directory
         self.epochs = epochs
@@ -106,7 +106,6 @@ class CLIPTuner:
         else:
             self.experiment = Experiment()
 
-        model_name = f"_{start_time}_{self.experiment.get_name()}.pt"
 
         saving_args = {
             "bs": batch_size,
@@ -114,8 +113,15 @@ class CLIPTuner:
             "weight_decay": weight_decay,
             "learning_rate": lr,
             "total_epochs": epochs,
+            "dataset_name": dataset_name,
             "evaluation_steps": evaluation_steps
         }
+
+        additional_name = ""
+        for key, value in saving_args.items():
+            additional_name += f"{key}_{value}_"
+
+        model_name = f"{additional_name}_{start_time}_{self.experiment.get_name()}.pt"
 
         with open(f"{saving_directory}/{model_name}_config.json", "w") as filino:
             filino.write(json.dumps(saving_args))

@@ -37,12 +37,14 @@ if __name__ == "__main__":
     train = pd.read_csv(args.training_dataset)
     valid = pd.read_csv(args.validation_dataset)
 
+    dataset_name = args.training_dataset.split("/")[-1].split(".")
+
     evaluation_steps = int(len(train)/4)
 
     cpt = CLIPTuner(lr=args.learning_rate, weight_decay=args.weight_decay, comet_tracking=args.comet_tracking,
                     comet_tags=args.comet_tags, model_type=args.clip_version,
                     saving_directory=args.save_directory, batch_size=args.batch_size,
-                    epochs=args.epochs, evaluation_steps=evaluation_steps)
+                    epochs=args.epochs, evaluation_steps=evaluation_steps, dataset_name=dataset_name)
 
     cpt.tuner(train, valid, num_workers=args.num_workers)
 
